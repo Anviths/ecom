@@ -56,7 +56,14 @@ public class User implements UserDetails {
     @Builder.Default
     private Set<Role> roles = EnumSet.noneOf(Role.class);
 
+    @Column(nullable = false)
+    private Integer tokenVersion = 0;
 
+    @Column(nullable = false)
+    private int failedLoginAttempts = 0;
+
+    @Column
+    private LocalDateTime accountLockedUntil;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

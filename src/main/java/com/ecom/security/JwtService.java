@@ -24,15 +24,16 @@ public class JwtService {
     private Long expiryTime;
 
     private SecretKey siningKey() {
-        byte[] bytes = jwtSecret.getBytes();
-        return Keys.hmacShaKeyFor(bytes);
+        return Keys.hmacShaKeyFor(
+                Base64.getDecoder().decode(jwtSecret)
+        );
     }
 
     public String generateToken(User user) {
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("role", user.getRoles().stream().map(Role::name).toList());
-
+        claims.put("roles", user.getRoles().stream().map(Role::name).toList());
+        claims.put("tv", user.getTokenVersion());
         Date now = new Date();
         Date exp = new Date(now.getTime() + expiryTime);
 
@@ -54,6 +55,14 @@ public class JwtService {
         }
     }
 
+    public Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(siningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
     public String extractUsername(String token) {
         return Jwts.parserBuilder().setSigningKey(siningKey()).build()
                 .parseClaimsJws(token).getBody().getSubject();
@@ -72,5 +81,15 @@ public class JwtService {
         return Collections.emptyList();
     }
 
+    public int extractTokenVersion(String token){
+
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(siningKey())
+                .build()
+                .parseClaimsJws(token).getBody();
+        return claims.get("tv", Integer.class);
+
+
+    }
 }
 

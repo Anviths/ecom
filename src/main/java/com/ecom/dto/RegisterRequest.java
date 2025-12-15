@@ -17,5 +17,5 @@ public class RegisterRequest {
     @NotBlank private String password;
     private String phone;
     private LocalDate dateOfBirth;
-    private Set<Role> role;
+
 }

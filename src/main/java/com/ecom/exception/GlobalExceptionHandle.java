@@ -4,6 +4,7 @@ import com.ecom.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -79,9 +80,28 @@ public class GlobalExceptionHandle {
                 .status(status.value())
                 .error(status.name())
                 .message(message)
-                .path(request.getRequestURI())
                 .build();
 
         return ResponseEntity.status(status).body(response);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex,HttpServletRequest request) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(PasswordReuseException.class)
+    public ResponseEntity<ErrorResponse> handlePasswordReuse(PasswordReuseException ex,HttpServletRequest request) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimit(TooManyRequestsException ex,HttpServletRequest request) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<ErrorResponse> accountLockException(AccountLockedException ex,HttpServletRequest request) {
+        return buildError(HttpStatus.LOCKED, ex.getMessage(), request);
     }
 }

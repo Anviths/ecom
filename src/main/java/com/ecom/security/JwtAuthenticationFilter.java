@@ -1,5 +1,6 @@
 package com.ecom.security;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,6 +10,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -21,30 +23,52 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AppUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
 
-        String header=request.getHeader("Authorization");
-        if(header == null || !header.startsWith("Bearer ")){
-           filterChain.doFilter(request,response);
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            filterChain.doFilter(request, response);
             return;
         }
 
-        String token =header.substring(7);
-        if(!jwtService.validateToken(token)){
-            filterChain.doFilter(request,response);
+        String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
             return;
         }
 
-        String username= jwtService.extractUsername(token);
-        var authorities=jwtService.extractRoles(token)
-                .stream()
-                .map(r->new SimpleGrantedAuthority("ROLE "+r))
-                .collect(Collectors.toSet());
+        String token = header.substring(7);
 
-        UsernamePasswordAuthenticationToken auth=
-                new UsernamePasswordAuthenticationToken(username,null,authorities);
-        SecurityContextHolder.getContext().setAuthentication(auth);
+        try {
+            String username = jwtService.extractUsername(token);
+            Integer tokenVersionInToken = jwtService.extractTokenVersion(token);
 
-        filterChain.doFilter(request,response);
+            var userDetails = userDetailsService.loadUserByUsername(username);
+
+            if (!(userDetails instanceof com.ecom.entity.User user)) {
+                throw new JwtException("Invalid user details");
+            }
+
+            if (!tokenVersionInToken.equals(user.getTokenVersion())) {
+                throw new JwtException("Token invalidated");
+            }
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            user,
+                            null,
+                            user.getAuthorities()
+                    );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        } catch (JwtException ex) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
+        filterChain.doFilter(request, response);
     }
 }

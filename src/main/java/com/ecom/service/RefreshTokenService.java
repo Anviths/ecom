@@ -10,4 +10,5 @@ public interface RefreshTokenService {
     void revoke(String token);
     void revokeAllForUser(User user);
 
+    void deleteAllByUser(User user);
 }

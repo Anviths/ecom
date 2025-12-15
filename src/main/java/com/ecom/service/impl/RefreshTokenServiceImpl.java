@@ -65,4 +65,9 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
             repo.save(rt);
         });
     }
+
+    @Override
+    public void deleteAllByUser(User user) {
+        repo.deleteAllByUser(user);
+    }
 }
